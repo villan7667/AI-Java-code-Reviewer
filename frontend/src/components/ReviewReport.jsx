@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, Tag, Button, Tooltip, ConfigProvider, theme } from 'antd'
 import { 
@@ -13,15 +13,17 @@ import {
   Clock, 
   HardDrive, 
   Code2,
-  ListCheck
+  ListCheck,
+  RotateCcw
 } from 'lucide-react'
 
 // Animated Score Ring Component
-function ScoreRing({ score }) {
+function ScoreRing({ score = 0 }) {
   const radius = 54
   const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / 100) * circumference
-  const color = score >= 80 ? '#06b6d4' : score >= 50 ? '#f59e0b' : '#f43f5e'
+  const normalizedScore = Math.min(Math.max(score, 0), 100)
+  const offset = circumference - (normalizedScore / 100) * circumference
+  const color = normalizedScore >= 80 ? '#06b6d4' : normalizedScore >= 50 ? '#f59e0b' : '#f43f5e'
 
   return (
     <div className="relative w-36 h-36 flex items-center justify-center">
@@ -40,7 +42,7 @@ function ScoreRing({ score }) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-3xl font-extrabold tracking-tight text-white">{score}</span>
+        <span className="text-3xl font-extrabold tracking-tight text-white">{normalizedScore}</span>
         <span className="text-[11px] text-slate-400 font-mono">/ 100</span>
       </div>
     </div>
@@ -48,27 +50,23 @@ function ScoreRing({ score }) {
 }
 
 // Custom Icon List Block
-function ListBlock({ title, items, tone, icon: Icon }) {
+function ListBlock({ title, items = [], tone, icon: Icon }) {
   const toneStyles = {
     good: {
       border: 'border-emerald-500/30 bg-emerald-950/20',
       iconColor: 'text-emerald-400',
-      badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
     },
     bad: {
       border: 'border-rose-500/30 bg-rose-950/20',
       iconColor: 'text-rose-400',
-      badgeBg: 'bg-rose-500/10 text-rose-300 border-rose-500/20'
     },
     warn: {
       border: 'border-amber-500/30 bg-amber-950/20',
       iconColor: 'text-amber-400',
-      badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20'
     },
     info: {
       border: 'border-sky-500/30 bg-sky-950/20',
       iconColor: 'text-sky-400',
-      badgeBg: 'bg-sky-500/10 text-sky-300 border-sky-500/20'
     },
   }
 
@@ -98,8 +96,15 @@ function ListBlock({ title, items, tone, icon: Icon }) {
   )
 }
 
-export default function ReviewReport({ review }) {
+export default function ReviewReport({ review, onClear }) {
   const [copied, setCopied] = useState(false)
+
+  // Persist review to localStorage whenever it updates
+  useEffect(() => {
+    if (review) {
+      localStorage.setItem('activeReviewReport', JSON.stringify(review))
+    }
+  }, [review])
 
   if (!review) return null
 
@@ -125,7 +130,7 @@ export default function ReviewReport({ review }) {
           <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-purple-500/10 rounded-3xl blur-xl pointer-events-none" />
 
           <div className="relative flex flex-col md:flex-row items-center gap-6">
-            <ScoreRing score={review.overallScore} />
+            <ScoreRing score={review.overallScore || review.score || 0} />
 
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm w-full">
               

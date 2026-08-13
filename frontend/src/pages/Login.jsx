@@ -31,7 +31,7 @@ export default function Login() {
         navigate('/register')
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Check your credentials.')
+      setError(err.response?.data?.message || err.message || 'Login failed. Check your credentials.')
     } finally {
       setLoading(false)
     }
