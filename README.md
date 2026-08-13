@@ -4,6 +4,20 @@
 
 ---
 
+<p align="center">
+  <a href="https://explore-jharkhand.onrender.com">
+    <img src="https://img.shields.io/badge/Live%20Demo-🌐%20Visit-green?style=for-the-badge" alt="Live Demo"/>
+  </a>
+</p>
+
+<p align="center"><i>Interactive snapshots from MY AI powerd code reviewer java / java script ,</i></p>
+
+<img width="1908" height="871" alt="image" src="https://github.com/user-attachments/assets/4410db73-0633-48a2-8bf3-0997b636ffd7" />
+ <img width="1920" height="3317" alt="image" src="https://github.com/user-attachments/assets/ac67d039-14e6-4e3a-8379-a6143a7ade26" /><br><br>
+
+
+
+
 ## Features
 
 - **Register / Login** with JWT authentication
@@ -87,7 +101,7 @@ JWT_SECRET=at-least-32-characters-of-random-secret
 JWT_EXPIRATION=86400000
 
 GEMINI_API_KEY=your-key-here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-3.6-flash
 PORT=8080
 ```
 
@@ -115,8 +129,8 @@ Backend runs on `http://localhost:8080`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | ❌ | Register new user |
-| POST | `/api/auth/login` | ❌ | Login, returns JWT |
+| POST | `/api/auth/register` | ✅ | Register new user |
+| POST | `/api/auth/login` | ✅ | Login, returns JWT |
 | GET | `/api/user/me` | ✅ | Get current user profile |
 | PUT | `/api/user/me` | ✅ | Update name / profileImage |
 | POST | `/api/review/submit` | ✅ | Review pasted code (JSON body) |
@@ -205,3 +219,11 @@ Frontend runs on `http://localhost:5173`
 ## License
 
 MIT
+
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=villan7667&color=00FFFF" alt="Profile Views" />
+  <span style="vertical-align: middle;">Made with ❤️ by </span>
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code:700&size=20&duration=2000&pause=500&color=00FFFF&vCenter=true&width=180&lines=ANKIT+KUMAR;VILLAN" align="center" />
+</p>
+
