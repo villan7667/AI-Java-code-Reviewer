@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+
+.gradient-text {
+  background: linear-gradient(-45deg, #8A2BE2, #00D2FF, #FF007F, #8A2BE2);
+  background-size: 300% auto;
+  
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  
+  animation: textGradientFlow 6s ease-in-out infinite;
+}
+
+@keyframes textGradientFlow {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #4338ca;
+  border-radius: 8px;
+}
