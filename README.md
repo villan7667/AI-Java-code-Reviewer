@@ -5,7 +5,7 @@
 ---
 
 <p align="center">
-  <a href="https://explore-jharkhand.onrender.com">
+  <a href="https://ai-java-code-reviewer.onrender.com/">
     <img src="https://img.shields.io/badge/Live%20Demo-🌐%20Visit-green?style=for-the-badge" alt="Live Demo"/>
   </a>
 </p>
