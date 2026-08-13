@@ -8,6 +8,6 @@ public class HomeController {
 
     @GetMapping("/")
     public String healthCheck() {
-        return "🚀 AI Code Reviewer Backend is Live and Running!";
+        return "@villan7667 sir AI Code Reviewer Backend is Live and Running!";
     }
 }
