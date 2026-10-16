@@ -3,7 +3,6 @@ package com.aicode.backend.controller;
 import com.aicode.backend.entity.User;
 import com.aicode.backend.exception.ResourceNotFoundException;
 import com.aicode.backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +11,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor
 public class UserController {
 
     private final UserRepository userRepository;
+
+    public UserController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @GetMapping("/me")
     public ResponseEntity<User> me(Authentication auth) {

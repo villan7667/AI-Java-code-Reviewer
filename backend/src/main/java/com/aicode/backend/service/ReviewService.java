@@ -5,17 +5,20 @@ import com.aicode.backend.entity.CodeReview;
 import com.aicode.backend.exception.InvalidFileException;
 import com.aicode.backend.exception.ResourceNotFoundException;
 import com.aicode.backend.repository.ReviewRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ReviewService {
 
     private final GeminiService geminiService;
     private final ReviewRepository reviewRepository;
+
+    public ReviewService(GeminiService geminiService, ReviewRepository reviewRepository) {
+        this.geminiService = geminiService;
+        this.reviewRepository = reviewRepository;
+    }
 
     public ReviewResponse reviewCode(String userId, String fileName, String sourceCode) {
         String safeFileName = (fileName == null || fileName.isBlank()) ? "pasted-code.java" : fileName;

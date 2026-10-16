@@ -11,3 +11,13 @@ Thumbs.db
 # env files (never commit real secrets)
 .env
 
+.agent
+.gemini
+.gsd
+.agents
+adapters
+GSD-STYLE.md
+model_capabilities.yaml
+PROJECT_RULES.md
+VERSION
+

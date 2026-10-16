@@ -8,7 +8,6 @@ import com.aicode.backend.exception.ResourceNotFoundException;
 import com.aicode.backend.repository.UserRepository;
 import com.aicode.backend.service.ReviewService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +18,15 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/review")
-@RequiredArgsConstructor
 public class ReviewController {
 
     private final ReviewService reviewService;
     private final UserRepository userRepository;
+
+    public ReviewController(ReviewService reviewService, UserRepository userRepository) {
+        this.reviewService = reviewService;
+        this.userRepository = userRepository;
+    }
 
     @PostMapping("/submit")
     public ResponseEntity<ReviewResponse> submit(@Valid @RequestBody ReviewRequest request, Authentication auth) {

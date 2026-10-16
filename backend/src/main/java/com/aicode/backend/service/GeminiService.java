@@ -2,8 +2,8 @@ package com.aicode.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -13,32 +13,31 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class GeminiService {
 
+    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${gemini.api.key}")
     private String apiKey;
 
-    @Value("${gemini.api.model:gemini-2.5-flash}")
+    @Value("${gemini.api.model:gemini-3.5-flash}")
     private String model;
 
     private static final String GEMINI_URL_TEMPLATE =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     /**
-     * Default list of stable fallback models in priority order.
-     * If the configured model encounters 503 (high demand) or 429 (rate limits),
-     * the service cascades gracefully to the remaining models.
+     * Active fallback models in priority order.
+     * gemini-3.5-flash and gemini-3.5-flash-lite are highly available and fast.
+     * gemini-3.8-flash and gemini-3.7-flash provide advanced reasoning fallbacks.
      */
     private static final List<String> FALLBACK_MODELS = List.of(
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-3.6-flash",
-            "gemini-flash-latest",
-            "gemini-2.5-pro"
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash"
     );
 
     /**
@@ -74,7 +73,7 @@ public class GeminiService {
         String lastErrorMessage = "Unknown error";
         int lastStatusCode = 0;
 
-        int maxAttempts = Math.min(modelsToTry.size(), 4);
+        int maxAttempts = modelsToTry.size();
 
         for (int i = 0; i < maxAttempts; i++) {
             String currentModel = modelsToTry.get(i);
@@ -166,14 +165,21 @@ public class GeminiService {
 
     /**
      * Cleans up model name by trimming whitespace and removing 'models/' prefix if present.
+     * Automatically migrates deprecated / 404 models to gemini-3.5-flash.
      */
     private String cleanModelName(String inputModel) {
         if (inputModel == null || inputModel.isBlank()) {
-            return "gemini-2.5-flash";
+            return "gemini-3.5-flash";
         }
         String cleaned = inputModel.trim();
         if (cleaned.startsWith("models/")) {
             cleaned = cleaned.substring("models/".length());
+        }
+        // Automatically migrate retired / 404 legacy models to active working model
+        if (cleaned.contains("1.5-flash") || cleaned.contains("2.0-flash") 
+                || cleaned.contains("2.5-flash") || cleaned.contains("2.5-pro")) {
+            log.info("Migrated retired model '{}' to 'gemini-3.5-flash'", cleaned);
+            return "gemini-3.5-flash";
         }
         return cleaned;
     }

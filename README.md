@@ -101,7 +101,7 @@ JWT_SECRET=at-least-32-characters-of-random-secret
 JWT_EXPIRATION=86400000
 
 GEMINI_API_KEY=your-key-here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash
 PORT=8080
 ```
 
@@ -175,7 +175,7 @@ Frontend runs on `http://localhost:5173`
    - `MONGODB_URI`
    - `JWT_SECRET`
    - `GEMINI_API_KEY`
-   - `GEMINI_MODEL` = `gemini-2.0-flash`
+   - `GEMINI_MODEL` = `gemini-3.5-flash`
    - `PORT` = `8080`
 
 ### Frontend (Static Site — Vercel / Netlify / Render)
