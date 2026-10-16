@@ -22,23 +22,43 @@ public class GeminiService {
     @Value("${gemini.api.key}")
     private String apiKey;
 
-    // Default fallback set to the active stable model: gemini-3.6-flash
-    @Value("${gemini.api.model:gemini-3.6-flash}")
+    @Value("${gemini.api.model:gemini-2.5-flash}")
     private String model;
 
     private static final String GEMINI_URL_TEMPLATE =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
     /**
+     * Default list of stable fallback models in priority order.
+     * If the configured model encounters 503 (high demand) or 429 (rate limits),
+     * the service cascades gracefully to the remaining models.
+     */
+    private static final List<String> FALLBACK_MODELS = List.of(
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-3.6-flash",
+            "gemini-flash-latest",
+            "gemini-2.5-pro"
+    );
+
+    /**
      * Sends the source code to Gemini and returns the raw text response.
-     * The prompt instructs Gemini to respond ONLY with JSON so it can be parsed
+     * Instructs Gemini to respond ONLY with JSON so it can be parsed
      * directly into a GeminiReviewResult.
      */
     public String reviewCode(String sourceCode, String language) {
         String prompt = buildPrompt(sourceCode, language);
 
-        // Sanitize legacy or deprecated model names passed from application.properties
-        String effectiveModel = getValidModelName(model);
+        String primaryModel = cleanModelName(model);
+
+        // Build unique ordered list of candidate models starting with user preference
+        List<String> modelsToTry = new ArrayList<>();
+        modelsToTry.add(primaryModel);
+        for (String fb : FALLBACK_MODELS) {
+            if (!modelsToTry.contains(fb)) {
+                modelsToTry.add(fb);
+            }
+        }
 
         Map<String, Object> body = Map.of(
                 "contents", List.of(
@@ -51,11 +71,14 @@ public class GeminiService {
         );
 
         JsonNode response = null;
-        int attempts = 0;
+        String lastErrorMessage = "Unknown error";
+        int lastStatusCode = 0;
 
-        while (attempts < 3) {
-            // Attempt with configured model on try 1, fallback to gemini-3.6-flash if retrying
-            String currentModel = (attempts == 0) ? effectiveModel : "gemini-3.6-flash";
+        int maxAttempts = Math.min(modelsToTry.size(), 4);
+
+        for (int i = 0; i < maxAttempts; i++) {
+            String currentModel = modelsToTry.get(i);
+            log.info("Invoking Gemini review using model: {} (attempt {}/{})", currentModel, i + 1, maxAttempts);
 
             WebClient client = WebClient.builder()
                     .baseUrl(String.format(GEMINI_URL_TEMPLATE, currentModel, apiKey))
@@ -66,45 +89,68 @@ public class GeminiService {
                 response = client.post()
                         .bodyValue(body)
                         .retrieve()
-                        .onStatus(status -> status.value() == 429, res -> {
-                            log.warn("Gemini rate limited (429), will retry...");
-                            return res.createException();
-                        })
                         .onStatus(status -> status.is4xxClientError(), res ->
                                 res.bodyToMono(String.class).map(err -> {
-                                    log.error("Gemini 4xx error: {}", err);
-                                    return new RuntimeException("Gemini API error: " + err);
+                                    log.error("Gemini 4xx error on model {}: {}", currentModel, err);
+                                    return new RuntimeException("HTTP_" + res.statusCode().value() + ": " + err);
+                                })
+                        )
+                        .onStatus(status -> status.is5xxServerError(), res ->
+                                res.bodyToMono(String.class).map(err -> {
+                                    log.warn("Gemini 5xx error on model {}: {}", currentModel, err);
+                                    return new RuntimeException("HTTP_" + res.statusCode().value() + ": " + err);
                                 })
                         )
                         .bodyToMono(JsonNode.class)
                         .block();
-                break; // success — exit loop
+
+                // If response succeeded and has candidates, exit retry loop
+                if (response != null && response.has("candidates") && !response.path("candidates").isEmpty()) {
+                    log.info("Gemini review succeeded using model: {}", currentModel);
+                    break;
+                }
+
+                // If response came back but contained an error field
+                if (response != null && response.has("error")) {
+                    String errorMsg = response.path("error").path("message").asText("Unknown error");
+                    int errorCode = response.path("error").path("code").asInt(0);
+                    lastErrorMessage = "Gemini API error " + errorCode + ": " + errorMsg;
+                    log.warn("Model {} returned error payload: {}", currentModel, lastErrorMessage);
+                    response = null; // force fallback
+                }
 
             } catch (Exception e) {
-                attempts++;
-                log.warn("Gemini attempt {}/3 failed: {}", attempts, e.getMessage());
-                if (attempts == 3) {
-                    throw new RuntimeException("Gemini API failed after 3 attempts. " +
-                            "Check your API key and quota. Error: " + e.getMessage());
+                lastErrorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
+                log.warn("Gemini attempt {}/{} with model '{}' failed: {}", i + 1, maxAttempts, currentModel, lastErrorMessage);
+
+                // Stop immediately if it's an authentication error (retrying other models won't help invalid key)
+                if (lastErrorMessage.contains("HTTP_401") || lastErrorMessage.contains("HTTP_403") 
+                        || lastErrorMessage.contains("API_KEY_INVALID")) {
+                    throw new RuntimeException("Invalid or unauthorized Gemini API key. Please check your GEMINI_API_KEY environment variable in Render.");
                 }
-                try {
-                    Thread.sleep(2000L * attempts); // wait 2s, then 4s before retrying
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+
+                // If we have more models to try, wait briefly with backoff
+                if (i < maxAttempts - 1) {
+                    try {
+                        Thread.sleep(1500L * (i + 1));
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
         }
 
         if (response == null) {
-            throw new RuntimeException("No response received from Gemini API");
-        }
-
-        // Check if Gemini returned an error body instead of candidates
-        if (response.has("error")) {
-            String errorMsg = response.path("error").path("message").asText("Unknown error");
-            int errorCode = response.path("error").path("code").asInt(0);
-            log.error("Gemini API error response: code={}, message={}", errorCode, errorMsg);
-            throw new RuntimeException("Gemini API error " + errorCode + ": " + errorMsg);
+            if (lastErrorMessage.contains("503") || lastErrorMessage.toLowerCase().contains("service unavailable")
+                    || lastErrorMessage.toLowerCase().contains("high demand")) {
+                throw new RuntimeException("Google Gemini AI service is currently experiencing high demand across model endpoints (503 Service Unavailable). Please retry in a few moments or set a different GEMINI_MODEL in Render.");
+            }
+            if (lastErrorMessage.contains("429") || lastErrorMessage.toLowerCase().contains("rate limit")
+                    || lastErrorMessage.toLowerCase().contains("quota")) {
+                throw new RuntimeException("Gemini API rate limit or quota exceeded (429). Please wait a moment or check your quota in Google AI Studio.");
+            }
+            throw new RuntimeException("Gemini API failed after " + maxAttempts + " attempts across fallback models. Last error: " + lastErrorMessage);
         }
 
         try {
@@ -119,17 +165,17 @@ public class GeminiService {
     }
 
     /**
-     * Checks if the injected model name is deprecated or null,
-     * replacing it with gemini-3.6-flash automatically.
+     * Cleans up model name by trimming whitespace and removing 'models/' prefix if present.
      */
-    private String getValidModelName(String inputModel) {
-        if (inputModel == null || inputModel.isBlank() 
-                || inputModel.contains("1.5-flash") 
-                || inputModel.contains("2.0-flash") 
-                || inputModel.contains("2.5-flash")) {
-            return "gemini-3.6-flash";
+    private String cleanModelName(String inputModel) {
+        if (inputModel == null || inputModel.isBlank()) {
+            return "gemini-2.5-flash";
         }
-        return inputModel;
+        String cleaned = inputModel.trim();
+        if (cleaned.startsWith("models/")) {
+            cleaned = cleaned.substring("models/".length());
+        }
+        return cleaned;
     }
 
     private String buildPrompt(String sourceCode, String language) {

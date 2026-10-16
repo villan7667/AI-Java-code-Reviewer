@@ -37,8 +37,8 @@ public class ReviewController {
         String userId = currentUserId(auth);
 
         String fileName = file.getOriginalFilename();
-        if (fileName == null || !(fileName.endsWith(".java") || fileName.endsWith(".js"))) {
-            throw new InvalidFileException("Only .java and .js files are supported");
+        if (fileName == null || !(fileName.endsWith(".java") || fileName.endsWith(".js") || fileName.endsWith(".jsx"))) {
+            throw new InvalidFileException("Only .java, .js, and .jsx files are supported");
         }
 
         String sourceCode;

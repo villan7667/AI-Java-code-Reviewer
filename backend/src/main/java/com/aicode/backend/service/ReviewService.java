@@ -65,8 +65,8 @@ public class ReviewService {
     private String detectLanguage(String fileName) {
         String lower = fileName.toLowerCase();
         if (lower.endsWith(".java")) return "JAVA";
-        if (lower.endsWith(".js")) return "JAVASCRIPT";
-        throw new InvalidFileException("Only .java and .js files are supported");
+        if (lower.endsWith(".js") || lower.endsWith(".jsx")) return "JAVASCRIPT";
+        throw new InvalidFileException("Only .java, .js, and .jsx files are supported");
     }
 
     private ReviewResponse toResponse(CodeReview review) {
